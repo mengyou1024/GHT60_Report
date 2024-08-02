@@ -1,0 +1,9 @@
+[submodule "components/UnionLib"]
+	path = components/UnionLib
+	url = https://github.com/mengyou1024/UnionLib.git
+[submodule "components/misc_utils"]
+	path = components/misc_utils
+	url = https://github.com/mengyou1024/misc_utils.git
+[submodule "components/QXlsx"]
+	path = components/QXlsx
+	url = https://github.com/mengyou1024/QXlsx.git
