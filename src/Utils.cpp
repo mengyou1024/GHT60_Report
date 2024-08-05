@@ -296,7 +296,9 @@ std::unique_ptr<FILE_RES> FILE_RES::FromFile(const std::wstring& file_name) noex
 
 bool FILE_RES::RenderExcel(const std::wstring&                           file_path,
                            const std::vector<std::shared_ptr<FILE_RES>>& data_vec,
-                           std::optional<double>                         overrid_value) noexcept {
+                           bool                                          priority_dac,
+                           std::optional<double>                         override_gate_height,
+                           std::optional<double>                         override_dac_db) noexcept {
     fs::path file_dir = fs::path(file_path).parent_path();
     if (file_dir != "" && !fs::exists(file_dir)) {
         if (!fs::create_directories(file_dir)) {
@@ -315,10 +317,10 @@ bool FILE_RES::RenderExcel(const std::wstring&                           file_pa
         }
         _G_RT      res;
         const bool is_dac = data_vec[index]->hasDacLine(0) && data_vec[index]->hasDacLine(2) && data_vec[index]->hasDacLine(4);
-        if (is_dac) {
-            res = data_vec[index]->GetResultFromDAC();
+        if (is_dac && priority_dac) {
+            res = data_vec[index]->GetResultFromDAC(override_dac_db);
         } else {
-            res = data_vec[index]->GetResultFromGate(overrid_value);
+            res = data_vec[index]->GetResultFromGate(override_gate_height);
         }
         using _T_RAIL_POS    = std::array<std::vector<std::variant<DefectInfo::ResultPos, DefectInfo::ResultIndex>>, 3>;
         _T_RAIL_POS rail_pos = {};

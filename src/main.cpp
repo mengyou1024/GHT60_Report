@@ -10,22 +10,33 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
 
     QCommandLineParser parser;
-    QCommandLineOption opt_override("override", "override value", "override", "0");
+    QCommandLineOption opt_override_dac("override_d", "override dac db value", "o_d", "0");
+    QCommandLineOption opt_override_gate("override_h", "override gate height value", "o_h", "0");
     parser.addPositionalArgument("inputs", "input file names", "[input file names]");
-    parser.addOptions({opt_override});
+    parser.addOptions({opt_override_dac, opt_override_gate});
     parser.parse(app.arguments());
     auto inputs = parser.positionalArguments();
     qDebug() << app.arguments();
     qDebug() << inputs;
-    std::optional<double> override = std::nullopt;
-    if (parser.isSet(opt_override)) {
+    std::optional<double> override_dac = std::nullopt;
+    if (parser.isSet(opt_override_dac)) {
         bool _ok = false;
-        auto _v  = parser.value("override").toDouble(&_ok);
+        auto _v  = parser.value("override_d").toDouble(&_ok);
         if (_ok) {
-            override = _v;
+            override_dac = _v;
         }
     }
-    qDebug() << override.value_or(0);
+    qDebug() << override_dac.value_or(0);
+
+    std::optional<double> override_gate = std::nullopt;
+    if (parser.isSet(opt_override_gate)) {
+        bool _ok = false;
+        auto _v  = parser.value("override_h").toDouble(&_ok);
+        if (_ok) {
+            override_gate = _v;
+        }
+    }
+    qDebug() << override_gate.value_or(0);
 
     if (inputs.empty()) {
         inputs = QFileDialog::getOpenFileNames(nullptr, "按住ctrl可以选择多个文件");
@@ -50,6 +61,11 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    bool priority_dac = false;
+    if (QMessageBox::question(nullptr, "判定标准", "是否优先使用DAC作为判定标准(无DAC则使用波门)") == QMessageBox::StandardButton::Yes) {
+        priority_dac = true;
+    }
+
     std::vector<std::shared_ptr<FILE_RES>> file_vec;
 
     for (auto& input : inputs) {
@@ -57,7 +73,7 @@ int main(int argc, char* argv[]) {
     }
 
     auto fileUtl = QFileDialog::getSaveFileName(nullptr, "选择报表保存位置", QDir::currentPath() + "/报表", "Excel (*.xlsx;*.xls)");
-    if (!FILE_RES::RenderExcel(fileUtl.toStdWString(), file_vec, override.value_or(0))) {
+    if (!FILE_RES::RenderExcel(fileUtl.toStdWString(), file_vec, priority_dac, override_dac, override_gate)) {
         QMessageBox::warning(nullptr, "警告", "导出失败");
     } else {
         QMessageBox::information(nullptr, "成功", "导出成功");

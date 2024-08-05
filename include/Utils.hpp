@@ -157,7 +157,9 @@ struct FILE_RES {
     static bool RenderExcel(
         const std::wstring&                           file_path,
         const std::vector<std::shared_ptr<FILE_RES>>& data_vec,
-        std::optional<double>                         overrid_value = std::nullopt) noexcept;
+        bool                                          priority_dac         = true,
+        std::optional<double>                         override_gate_height = std::nullopt,
+        std::optional<double>                         override_dac_db      = std::nullopt) noexcept;
 
     using _T_R_POS = std::vector<DefectInfo::ResultPos>;
     using _T_R_IDX = std::vector<DefectInfo::ResultIndex>;
