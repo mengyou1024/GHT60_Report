@@ -35,6 +35,10 @@ add_subdirectory(components/QXlsx/QXlsx)
 target_link_libraries(misc_utils PUBLIC QXlsx::QXlsx)
 target_link_libraries(UnionLib PUBLIC misc_utils Qt5::Core Qt5::SerialPort Qt5::Widgets)
 
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+
 set(CMAKE_CXX_STANDARD 23)
 
 add_compile_options(
@@ -48,7 +52,7 @@ aux_source_directory(src CURRENT_SRC)
 add_executable(${PROJECT_NAME} ${CURRENT_SRC})
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME} PUBLIC UnionLib)
-
+set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 install(TARGETS ${PROJECT_NAME})
 install(FILES "template/GHT-2BReportTemplate.xlsx" DESTINATION bin)
 include(CPack)

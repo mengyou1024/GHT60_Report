@@ -316,7 +316,7 @@ bool FILE_RES::RenderExcel(const std::wstring&                           file_pa
         _G_RT      res;
         const bool is_dac = data_vec[index]->hasDacLine(0) && data_vec[index]->hasDacLine(2) && data_vec[index]->hasDacLine(4);
         if (is_dac) {
-            res = data_vec[index]->GetResultFromDAC(overrid_value);
+            res = data_vec[index]->GetResultFromDAC();
         } else {
             res = data_vec[index]->GetResultFromGate(overrid_value);
         }
