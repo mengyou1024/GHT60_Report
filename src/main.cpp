@@ -1,4 +1,3 @@
-/* encoding: GB2312 */
 #include "Utils.hpp"
 #include <QApplication>
 #include <QCommandLineParser>
