@@ -632,7 +632,7 @@ static std::vector<T> MergeHelper(
     _D                                    bias,
     std::optional<std::function<_M&(T&)>> MAX) noexcept {
     std::vector<T> ret;
-    for (auto i = 0; i < data.size(); i++) {
+    for (auto i = 0; i < std::ssize(data); i++) {
         if ((ret.size() == 0) || (FIRST(data[i]) - SECOND(ret.back()) >= bias)) {
             ret.emplace_back(data[i]);
         }
