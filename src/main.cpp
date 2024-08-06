@@ -1,82 +1,47 @@
-#include "Utils.hpp"
+#include "UtilsIntr.hpp"
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include <QQmlEngine>
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
 
+    QFont font;
+    font.setPixelSize(16);
+    app.setFont(font);
+
     QCommandLineParser parser;
-    QCommandLineOption opt_override_dac("override_d", "override dac db value", "o_d", "0");
-    QCommandLineOption opt_override_gate("override_h", "override gate height value", "o_h", "0");
     parser.addPositionalArgument("inputs", "input file names", "[input file names]");
-    parser.addOptions({opt_override_dac, opt_override_gate});
     parser.parse(app.arguments());
     auto inputs = parser.positionalArguments();
-    qDebug() << app.arguments();
-    qDebug() << inputs;
-    std::optional<double> override_dac = std::nullopt;
-    if (parser.isSet(opt_override_dac)) {
-        bool _ok = false;
-        auto _v  = parser.value("override_d").toDouble(&_ok);
-        if (_ok) {
-            override_dac = _v;
-        }
-    }
-    qDebug() << override_dac.value_or(0);
 
-    std::optional<double> override_gate = std::nullopt;
-    if (parser.isSet(opt_override_gate)) {
-        bool _ok = false;
-        auto _v  = parser.value("override_h").toDouble(&_ok);
-        if (_ok) {
-            override_gate = _v;
-        }
-    }
-    qDebug() << override_gate.value_or(0);
+    const QUrl            url("qrc:/qml/Main.qml");
+    QQmlApplicationEngine engine;
+    QObject::connect(
+        &engine, &QQmlApplicationEngine::objectCreated, &app,
+        [url](QObject* obj, const QUrl& objUrl) {
+            if (!obj && url == objUrl)
+                QCoreApplication::exit(-1);
+        },
+        Qt::QueuedConnection);
 
-    if (inputs.empty()) {
-        inputs = QFileDialog::getOpenFileNames(nullptr, "按住ctrl可以选择多个文件");
+    auto context = engine.rootContext();
+
+    if (inputs.size() > 0) {
+        context->setContextProperty("SELECTED_FILE", inputs[0]);
     } else {
-        auto accept_btn = QMessageBox::question(nullptr, "导出模式选择", "点击是导出当前选中数据, 选择否重新选择数据");
-        if (accept_btn == QMessageBox::StandardButton::Yes) {
-            if (!QFileInfo::exists(inputs[0])) {
-                QMessageBox::warning(nullptr, "警告", "文件不存在, 请先选择一个文件打开");
-                return -1;
-            }
-        } else {
-            QString _open_path = QDir::currentPath();
-            if (QFileInfo::exists(inputs[0])) {
-                QFileInfo filePath(inputs[0]);
-                _open_path = filePath.dir().absolutePath();
-            }
-            inputs = QFileDialog::getOpenFileNames(nullptr, "按住ctrl可以选择多个文件", _open_path);
-        }
+        context->setContextProperty("SELECTED_FILE", R"(D:\Project\GHT_2B\GHT_2B\GHT_2B软件240505\60轨 V3.1.240412 源代码\超声数据60\Data\20201027\涂占宽-20201027 1246-13-60-2023110500100-0001.bmp)");
     }
 
-    if (inputs.empty()) {
-        return 0;
-    }
+    qmlRegisterSingletonInstance("GHT60", 1, 0, "QSUtils", QSUtils::Instance());
+    qmlRegisterType<UtilsIntr>("GHT60", 1, 0, "Intr");
 
-    bool priority_dac = false;
-    if (QMessageBox::question(nullptr, "判定标准", "是否优先使用DAC作为判定标准(无DAC则使用波门)") == QMessageBox::StandardButton::Yes) {
-        priority_dac = true;
-    }
-
-    std::vector<std::shared_ptr<FILE_RES>> file_vec;
-
-    for (auto& input : inputs) {
-        file_vec.emplace_back(FILE_RES::FromFile(input.toStdWString()));
-    }
-
-    auto fileUtl = QFileDialog::getSaveFileName(nullptr, "选择报表保存位置", QDir::currentPath() + "/报表", "Excel (*.xlsx;*.xls)");
-    if (!FILE_RES::RenderExcel(fileUtl.toStdWString(), file_vec, priority_dac, override_dac, override_gate)) {
-        QMessageBox::warning(nullptr, "警告", "导出失败");
-    } else {
-        QMessageBox::information(nullptr, "成功", "导出成功");
-    }
-    return 0;
+    engine.load(url);
+    return app.exec();
 }

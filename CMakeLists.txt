@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+
 project(GHT60_Report)
 
 function(add_subdirectory_path path)
@@ -27,17 +31,15 @@ function(add_subdirectory_path path)
     endforeach(ITEM ${SUBPATH})
 endfunction(add_subdirectory_path path)
 
-find_package(Qt5 5.15 REQUIRED COMPONENTS Core SerialPort Widgets)
+find_package(Qt5 5.15 REQUIRED COMPONENTS Core SerialPort Widgets Quick)
 
 add_subdirectory_path("components")
 
 add_subdirectory(components/QXlsx/QXlsx)
 target_link_libraries(misc_utils PUBLIC QXlsx::QXlsx)
-target_link_libraries(UnionLib PUBLIC misc_utils Qt5::Core Qt5::SerialPort Qt5::Widgets)
+target_link_libraries(UnionLib PUBLIC misc_utils Qt5::Core Qt5::SerialPort Qt5::Widgets Qt5::Quick)
 
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
+include_directories(include)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -48,9 +50,17 @@ add_compile_options(
     "$<$<CXX_COMPILER_ID:MSVC>:/W4>"
 )
 
-aux_source_directory(src CURRENT_SRC)
-add_executable(${PROJECT_NAME} ${CURRENT_SRC})
-target_include_directories(${PROJECT_NAME} PUBLIC include)
+
+
+add_executable(
+    ${PROJECT_NAME}
+    src/main.cpp
+    src/Utils.cpp
+    src/UtilsIntr.cpp
+    include/Utils.hpp
+    include/UtilsIntr.hpp
+    resources/resources.qrc
+)
 target_link_libraries(${PROJECT_NAME} PUBLIC UnionLib)
 set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 install(TARGETS ${PROJECT_NAME})

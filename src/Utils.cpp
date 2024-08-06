@@ -554,7 +554,7 @@ std::optional<std::function<double(double)>> FILE_RES::getDacLine(int channel) c
         } else if (x >= dist[dist.size() - 1]) {
             return db[db.size() - 1];
         } else {
-            for (int i = 0; i < dist.size(); i++) {
+            for (int i = 0; i < std::ssize(dist); i++) {
                 if (x >= dist[i] && x < dist[i + 1]) {
                     return db[i] * std::exp(dacays[i] * (x - dist[i]));
                 }

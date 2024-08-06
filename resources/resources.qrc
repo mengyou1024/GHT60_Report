@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>img/close.png</file>
+        <file>qml/Toast.qml</file>
+        <file>qml/ToastManager.qml</file>
+        <file>img/Failed.png</file>
+        <file>img/Succed.png</file>
+    </qresource>
+</RCC>
