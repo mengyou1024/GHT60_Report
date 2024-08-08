@@ -44,21 +44,22 @@ ApplicationWindow {
     property var folderList: []
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
+        anchors.margins: 30
         GridLayout {
             id: _option
             Layout.alignment: Qt.AlignHCenter
-            rows: 3
+            rows: 2
             columns: 2
 
             CheckBox {
+                visible: false
                 Layout.columnSpan: 2
                 id: use_dac
                 checked: true
                 text: "优先使用DAC作为判定标准(如果无DAC则使用波门)"
             }
 
-            CheckBox {
+            RadioButton {
                 id: override_gate
                 checked: false
                 text: "覆盖波门高度"
@@ -72,7 +73,7 @@ ApplicationWindow {
                 editable: true
             }
 
-            CheckBox {
+            RadioButton {
                 id: override_dac
                 checked: false
                 text: "DAC增益"

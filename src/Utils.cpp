@@ -162,11 +162,10 @@ void DeleteNode(int p) /* deletes node p from tree */
 int Decode(BYTE* src, int srclen, BYTE* dest, int deslength) {
     int          i, j, k, r, c;
     unsigned int flags;
-    int          soulen, destlen;
+    int          soulen = 0, destlen = 0;
 
-    soulen = destlen = 0;
-    r                = *(src + 0);
-    c                = *(src + 1);
+    r = *(src + 0);
+    c = *(src + 1);
     if (r != 0x55 && c != 0xaa) { // 未压缩
         memcpy(dest, src, srclen);
         return srclen;
@@ -336,20 +335,20 @@ bool FILE_RES::RenderExcel(const std::wstring&                           file_pa
         };
 
         // 计算单个缺陷的比例
-        auto GET_DEFECT_RATE_HELPER = [&](const auto& val, int i) -> double
+        auto GET_DEFECT_RATE_HELPER = [&](const auto& val, int i) -> std::pair<double, int>
             requires std::is_same_v<std::decay_t<decltype(val)>, DefectInfo::ResultPos> ||
                      std::is_same_v<std::decay_t<decltype(val)>, DefectInfo::ResultIndex>
         {
             if constexpr (std::is_same_v<std::decay_t<decltype(val)>, DefectInfo::ResultPos>) {
-                return val.pos_end - val.pos_start + (1 / 300.0);
+                return std::make_pair(val.pos_end - val.pos_start + (1 / 300.0), val.channel);
             } else {
                 int ch    = i * 2;
                 int range = data_vec[index]->channelParam[ch].nEndcoder - data_vec[index]->channelParam[ch].nEncoder + 1;
-                return static_cast<double>(val.index_end - val.index_start + 1) / static_cast<double>(range);
+                return std::make_pair(static_cast<double>(val.index_end - val.index_start + 1) / static_cast<double>(range), val.channel);
             }
         };
 
-        std::array<std::pair<double, double>, 3> defect_statistics = {};
+        std::array<std::tuple<double, double, int>, 3> defect_statistics = {};
 
         for (int i = 0; i < 3; i++) {
             rail_pos[i].insert(rail_pos[i].end(), res[i * 2].begin(), res[i * 2].end());
@@ -360,23 +359,25 @@ bool FILE_RES::RenderExcel(const std::wstring&                           file_pa
 
             double __max_second_1 = 0;
             for (const auto& it : res[i * 2]) {
-                auto temp = GET_DEFECT_RATE_HELPER(it, i);
-                if (defect_statistics[i].first < temp) {
-                    defect_statistics[i].first = temp;
+                auto [temp, ch] = GET_DEFECT_RATE_HELPER(it, i);
+                if (std::get<0>(defect_statistics[i]) < temp) {
+                    std::get<0>(defect_statistics[i]) = temp;
+                    std::get<2>(defect_statistics[i]) = ch;
                 }
                 __max_second_1 += temp;
             }
 
             double __max_second_2 = 0;
             for (const auto& it : res[i * 2 + 1]) {
-                auto temp = GET_DEFECT_RATE_HELPER(it, i);
-                if (defect_statistics[i].first < temp) {
-                    defect_statistics[i].first = temp;
+                auto [temp, ch] = GET_DEFECT_RATE_HELPER(it, i);
+                if (std::get<0>(defect_statistics[i]) < temp) {
+                    std::get<0>(defect_statistics[i]) = temp;
+                    std::get<2>(defect_statistics[i]) = ch;
                 }
                 __max_second_2 += temp;
             }
 
-            defect_statistics[i].second = std::max(__max_second_2, __max_second_1);
+            std::get<1>(defect_statistics[i]) = std::max(__max_second_2, __max_second_1);
 
             if (rail_pos[i].size() > 5) {
                 rail_pos[i].erase(rail_pos[i].begin() + 5, rail_pos[i].end());
@@ -445,20 +446,46 @@ bool FILE_RES::RenderExcel(const std::wstring&                           file_pa
             return QString::number(val.equivalent_max * 100.0, 'f', 1) + "%";
         };
 
+        auto GET_COLOR_HELPER = [&](const auto& val) -> QColor
+            requires std::is_same_v<std::decay_t<decltype(val)>, DefectInfo::ResultPos> ||
+                     std::is_same_v<std::decay_t<decltype(val)>, DefectInfo::ResultIndex>
+        {
+            if (val.channel % 2 == 0) {
+                return QColor(0x0099CC);
+            }
+            return QColor(0xFF6666);
+        };
+
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 5; j++) {
-                if (j >= rail_pos[i].size()) {
+                if (j >= std::ssize(rail_pos[i])) {
                     idx_column += 2;
                 } else {
-                    auto _HEPLER = std::bind(CONVERT_RANGE_HELPER, std::placeholders::_1, i);
-                    auto range   = std::visit(_HEPLER, rail_pos[i][j]);
-                    doc.write(idx_row, idx_column++, QString::asprintf("%.1fmm~%.1fmm", range.first, range.second));
-                    doc.write(idx_row, idx_column++, std::visit(GET_EVUIVALENT_HELPER, rail_pos[i][j]));
+                    auto          _HEPLER = std::bind(CONVERT_RANGE_HELPER, std::placeholders::_1, i);
+                    auto          range   = std::visit(_HEPLER, rail_pos[i][j]);
+                    QXlsx::Format fmt;
+                    fmt.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+                    fmt.setVerticalAlignment(QXlsx::Format::AlignVCenter);
+                    fmt.setPatternBackgroundColor(std::visit(GET_COLOR_HELPER, rail_pos[i][j]));
+                    doc.write(idx_row, idx_column++, QString::asprintf("%.1fmm~%.1fmm", range.first, range.second), fmt);
+                    doc.write(idx_row, idx_column++, std::visit(GET_EVUIVALENT_HELPER, rail_pos[i][j]), fmt);
                 }
             }
 
-            doc.write(idx_row, idx_column++, QString::number(defect_statistics[i].first * 100.0, 'f', 1) + "%");
-            doc.write(idx_row, idx_column++, QString::number(defect_statistics[i].second * 100.0, 'f', 1) + "%");
+            if (std::get<0>(defect_statistics[i]) > 0.0) {
+                QXlsx::Format fmt;
+                fmt.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+                fmt.setVerticalAlignment(QXlsx::Format::AlignVCenter);
+                if (std::get<2>(defect_statistics[i]) % 2 == 0) {
+                    fmt.setPatternBackgroundColor(QColor(0x0099CC));
+                } else {
+                    fmt.setPatternBackgroundColor(QColor(0xFF6666));
+                }
+                doc.write(idx_row, idx_column++, QString::number(std::get<0>(defect_statistics[i]) * 100.0, 'f', 1) + "%", fmt);
+            } else {
+                doc.write(idx_row, idx_column++, QString::number(std::get<0>(defect_statistics[i]) * 100.0, 'f', 1) + "%");
+            }
+            doc.write(idx_row, idx_column++, QString::number(std::get<1>(defect_statistics[i]) * 100.0, 'f', 1) + "%");
             doc.write(idx_row, idx_column++, "");
         }
     }
@@ -606,6 +633,7 @@ FILE_RES::_G_RT FILE_RES::GetResultFromGate(std::optional<double> gate_height) c
                 auto [_pos, _amp] = gate_result.value();
                 if (_amp / 200.0 >= gate.height) {
                     DefectInfo info;
+                    info.channel    = _ch;
                     info.index      = _coder;
                     info.pos        = _pos;
                     info.equivalent = _amp / 200.0;
@@ -656,6 +684,7 @@ std::vector<DefectInfo::ResultPos> DefectInfo::GetResultByPos(const std::vector<
     std::vector<DefectInfo::ResultPos> ret;
     for (const auto& i : _copy) {
         DefectInfo::ResultPos res;
+        res.channel        = i.channel;
         res.pos_start      = i.pos;
         res.pos_end        = i.pos;
         res.equivalent_max = i.equivalent;
@@ -673,6 +702,7 @@ std::vector<DefectInfo::ResultIndex> DefectInfo::GetResultByIndex(const std::vec
     std::vector<DefectInfo::ResultIndex> ret;
     for (const auto& i : _copy) {
         DefectInfo::ResultIndex res;
+        res.channel        = i.channel;
         res.index_start    = i.index;
         res.index_end      = i.index;
         res.equivalent_max = i.equivalent;

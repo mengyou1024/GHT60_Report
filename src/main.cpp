@@ -36,7 +36,9 @@ int main(int argc, char* argv[]) {
     if (inputs.size() > 0) {
         context->setContextProperty("SELECTED_FILE", inputs[0]);
     } else {
+#ifdef QT_DEBUG
         context->setContextProperty("SELECTED_FILE", R"(D:\Project\GHT_2B\GHT_2B\GHT_2B软件240505\60轨 V3.1.240412 源代码\超声数据60\Data\20201027\涂占宽-20201027 1246-13-60-2023110500100-0001.bmp)");
+#endif
     }
 
     qmlRegisterSingletonInstance("GHT60", 1, 0, "QSUtils", QSUtils::Instance());

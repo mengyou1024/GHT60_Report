@@ -36,14 +36,36 @@ bool UtilsIntr::excelRender(QList<QVariant> dirs, bool use_dac, bool override_ga
         o_dac = dac_db;
     }
 
-    auto fileUtl = QFileDialog::getSaveFileName(nullptr, "选择报表保存位置", QDir::currentPath() + "/报表-" + QDateTime::currentDateTime().toString("yyyy-MM-dd-hh-mm-ss"), "Excel (*.xlsx;*.xls)");
-    qDebug() << "fileUtl:" << fileUtl;
-    if (fileUtl.isEmpty()) {
-        return false;
+    QSettings settings("export_setting.ini", QSettings::Format::IniFormat);
+    settings.beginGroup("DIR");
+
+    if (settings.value("export").isNull() || !QDir(settings.value("export").toString()).exists()) {
+        QString fileUrl = QFileDialog::getExistingDirectory(nullptr, "选择默认报表导出位置");
+        if (fileUrl.isEmpty()) {
+            return false;
+        }
+        settings.setValue("export", fileUrl);
+        settings.endGroup();
+        settings.sync();
+        settings.beginGroup("DIR");
     }
 
-    auto ret = FILE_RES::RenderExcel(fileUtl.toStdWString(), file_vec, use_dac, o_dac, o_gate);
+    QString exportFilename = settings.value("export").toString() + "/报表-" + QDateTime::currentDateTime().toString("yyyy-MM-dd-hh-mm-ss") + ".xlsx";
+    auto    ret            = FILE_RES::RenderExcel(exportFilename.toStdWString(), file_vec, use_dac, o_dac, o_gate);
     qDebug() << "ret=" << ret;
+    if (ret == true) {
+        QProcess process(nullptr);
+        QObject::connect(&process, &QProcess::readyReadStandardOutput, [&process]() { qInfo() << process.readAllStandardOutput(); });
+        QObject::connect(&process, &QProcess::readyReadStandardError, [&process]() { qCritical() << process.readAllStandardError(); });
+
+#ifdef QT_DEBUG
+        process.start("cmd", QStringList() << "/c" << "start ksolaunch.exe" << exportFilename);
+#else
+        process.start("ksolaunch.exe", QStringList() << exportFilename);
+#endif
+        process.waitForStarted();
+        process.waitForFinished();
+    }
     return ret;
 }
 

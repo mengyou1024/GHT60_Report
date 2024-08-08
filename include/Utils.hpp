@@ -111,12 +111,14 @@ struct CH_PARA {
 };
 
 struct DefectInfo {
+    int    channel    = -1;
     int    index      = -1;
     double pos        = 0;
     double equivalent = 0; // 波高(0-1) 或者 ΔdB
     bool   isDB       = false;
 
     struct ResultPos {
+        int    channel        = -1;
         double pos_start      = 0;
         double pos_end        = 0;
         double equivalent_max = 0;
@@ -124,6 +126,7 @@ struct DefectInfo {
     };
 
     struct ResultIndex {
+        int    channel        = -1;
         int    index_start    = 0;
         int    index_end      = 0;
         double equivalent_max = 0;
